@@ -1,0 +1,14 @@
+{
+  "name": "maneki-store-bot",
+  "version": "2.0.0",
+  "description": "Bot WhatsApp Maneki Store - Conectado a Supabase 🐱",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
