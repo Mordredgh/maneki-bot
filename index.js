@@ -667,4 +667,16 @@ app.get("/privacidad", (_, res) => {
 app.get("/", (_, res) => res.send("🐱 Maneki Store Bot - Activo y conectado a Supabase"));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🐱 Maneki Store Bot corriendo en puerto ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`🐱 Maneki Store Bot corriendo en puerto ${PORT}`);
+  try {
+    const r = await axios.post(
+      `https://graph.facebook.com/v18.0/${CONFIG.PHONE_NUMBER_ID}/subscribed_apps`,
+      { subscribed_fields: ["messages"] },
+      { headers: { Authorization: `Bearer ${CONFIG.WHATSAPP_TOKEN}`, "Content-Type": "application/json" } }
+    );
+    console.log("✅ Suscripción al webhook:", JSON.stringify(r.data));
+  } catch (e) {
+    console.error("❌ Error suscripción:", e.response?.data || e.message);
+  }
+});
