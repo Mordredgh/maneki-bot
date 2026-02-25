@@ -660,6 +660,10 @@ app.get("/registrar", async (_, res) => {
   }
 });
 
+
+app.get("/privacidad", (_, res) => {
+  res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Política de Privacidad - Maneki Store</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;line-height:1.6}h1{color:#333}h2{color:#555}</style></head><body><h1>Política de Privacidad - Maneki Store Bot</h1><p><strong>Última actualización:</strong> Febrero 2025</p><h2>1. Información que recopilamos</h2><p>Recopilamos el número de teléfono y mensajes enviados a través de WhatsApp para procesar pedidos y brindar atención al cliente.</p><h2>2. Uso de la información</h2><p>La información se usa exclusivamente para: procesar pedidos, rastrear envíos y mejorar el servicio al cliente de Maneki Store.</p><h2>3. Almacenamiento</h2><p>Los datos se almacenan de forma segura en Supabase y no se comparten con terceros.</p><h2>4. Contacto</h2><p>Para cualquier duda sobre privacidad, escríbenos a través de WhatsApp o visita nuestra página de Facebook.</p></body></html>`);
+});
 app.get("/", (_, res) => res.send("🐱 Maneki Store Bot - Activo y conectado a Supabase"));
 
 const PORT = process.env.PORT || 3000;
