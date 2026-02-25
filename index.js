@@ -671,7 +671,7 @@ app.listen(PORT, async () => {
   console.log(`🐱 Maneki Store Bot corriendo en puerto ${PORT}`);
   try {
     const r = await axios.post(
-      `https://graph.facebook.com/v18.0/${CONFIG.PHONE_NUMBER_ID}/subscribed_apps`,
+      `https://graph.facebook.com/v18.0/2681369575563434/subscribed_apps`,
       { subscribed_fields: ["messages"] },
       { headers: { Authorization: `Bearer ${CONFIG.WHATSAPP_TOKEN}`, "Content-Type": "application/json" } }
     );
