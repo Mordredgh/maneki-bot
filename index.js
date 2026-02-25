@@ -11,7 +11,7 @@ const CONFIG = {
   // Meta / WhatsApp
   VERIFY_TOKEN: "maneki_store_2024",
   WHATSAPP_TOKEN: process.env.WHATSAPP_TOKEN || "EAANLqM41gEgBQ0LwaUl0lafOHXbpbku1uIBTlcE9xVJxoIZC1IqJehuCrZCLcLxpyNFTc2cTojZC6EoxpZAmGjwjwRACjj7m7JyNn6kcPSDPXMFGz210V7AxchZBNd7uHrYc9ZAUVJdccEclOZC32ZCK8A3bIi4YHYEkeVPt2OYYLWYRWtbEtZCAlK6NwPdjV9QmmpYy9CDZBTPd6mDTPBCaDqh78ZA5zFiTP1w7jt0vqCpRoPzG0wJQbv1MZBmH05yXIhIGcopFni9bFnKSZCeQS9AWmnpcZCBFTiNvR2F9btrgZDZD",
-  PHONE_NUMBER_ID: "1000545163142966",
+  PHONE_NUMBER_ID: "930517563487238",
 
   // Supabase - los encuentras en Settings > API dentro de tu proyecto
   SUPABASE_URL: "https://hoqcrljgmamaumtdrtzi.supabase.co",
