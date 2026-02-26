@@ -26,7 +26,7 @@ const CONFIG = {
   FACEBOOK_PAGE: "https://www.facebook.com/share/1AnSmoH5Mc/",
   STORE_NAME: "Maneki Store 🐱",
   HORARIO: "Lun-Sáb 8am-10pm | Dom 8am-2pm",
-  GEMINI_KEY: process.env.GEMINI_KEY || "AIzaSyD_Qrsf77Xwta4X-kWgkylvQnRSdigo6T0"
+  GEMINI_KEY: process.env.GEMINI_KEY
 };
 
 // ============================================================
