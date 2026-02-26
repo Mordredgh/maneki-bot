@@ -1,7 +1,7 @@
 {
   "name": "maneki-store-bot",
-  "version": "2.0.0",
-  "description": "Bot WhatsApp Maneki Store - Conectado a Supabase 🐱",
+  "version": "3.0.0",
+  "description": "Bot WhatsApp Maneki Store con Gemini IA 🐱🤖",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
