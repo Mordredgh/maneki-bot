@@ -11,7 +11,7 @@ const CONFIG = {
   // Meta / WhatsApp
   VERIFY_TOKEN: "maneki_store_2024",
   WHATSAPP_TOKEN: process.env.WHATSAPP_TOKEN || "EAANLqM41gEgBQzdD5ocu0V21COrnxlhIA5qoV64QZAsVLas2CZAoZBm1DsKNiIV4ALENKjm9lcjjpS7JfGP3ELLZCZCtbrsfHzR31m47XbnVDoyN1TgBQW1RQnGRq1VC1h2Axuz44QuUlSchmkoVQXyCDHJiL7Ax5c9ZAPQsHDQ5BfFJlZBz694m3joec0I5ITYjQZDZD",
-  PHONE_NUMBER_ID: "930517563487238",
+  PHONE_NUMBER_ID: "1000545163142966",
 
   // Supabase - los encuentras en Settings > API dentro de tu proyecto
   SUPABASE_URL: "https://hoqcrljgmamaumtdrtzi.supabase.co",
@@ -25,7 +25,8 @@ const CONFIG = {
   ],
   FACEBOOK_PAGE: "https://www.facebook.com/share/1AnSmoH5Mc/",
   STORE_NAME: "Maneki Store 🐱",
-  HORARIO: "Lun-Sáb 8am-10pm | Dom 8am-2pm"
+  HORARIO: "Lun-Sáb 8am-10pm | Dom 8am-2pm",
+  GEMINI_KEY: process.env.GEMINI_KEY || "AIzaSyD_Qrsf77Xwta4X-kWgkylvQnRSdigo6T0"
 };
 
 // ============================================================
@@ -34,20 +35,118 @@ const CONFIG = {
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
 // ============================================================
+//  GEMINI IA
+// ============================================================
+async function buildSystemPrompt() {
+  const productos = await getProductos();
+  const productosTexto = productos.length > 0
+    ? productos.map(p => `- ${p.name} | Precio: $${p.price || "consultar"} | Categoría: ${p.category}`).join("\n")
+    : "- Cuadros personalizados 8x10\n- Playeras personalizadas\n- Tazas sublimadas\n- Cojines sublimados\n- Impresión 3D\n- Grabado láser\n- Llaveros de acrílico";
+
+  return `Eres el asistente virtual de Maneki Store, tienda de regalos personalizados en Monterrey, México.
+
+INFORMACIÓN DEL NEGOCIO:
+- Horario: Lunes-Sábado 8am-10pm, Domingos 8am-2pm
+- Entrega: 2 a 4 días hábiles. Anticipo: 20-40%
+- Facebook: https://www.facebook.com/share/1AnSmoH5Mc/
+
+PRODUCTOS:
+${productosTexto}
+
+PLAYERAS: Hombre/Mujer (S,M,L,XL), Niño (2,3,4,5,6,6-8,8-10,10-12,12-14)
+Colores: Negro, Blanco, Rojo, Royal, Marino y más
+ENVÍOS: Área Metro Monterrey y República (DHL, FedEx, Redpack, J&T)
+PAGOS: Efectivo, tarjeta o transferencia
+
+INSTRUCCIONES:
+1. Responde en español, amigable con emojis moderados
+2. Para pedidos recopila: nombre, producto, detalles (talla/color/diseño), entrega, dirección si aplica, pago
+3. Cuando tengas TODOS los datos incluye al final exactamente:
+   [PEDIDO_LISTO]{"nombre":"...","telefono":"TELEFONO","producto":"...","entrega":"...","notas":"..."}[/PEDIDO_LISTO]
+4. Para rastreo con folio WA-XXXXXX: [RASTREAR]WA-XXXXXX[/RASTREAR]
+5. Si pide asesor humano: [ASESOR_SOLICITADO]
+6. Sé breve y natural como empleado amigable`;
+}
+
+async function llamarGemini(historial, systemPrompt) {
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.GEMINI_KEY}`;
+    const contents = [
+      { role: "user", parts: [{ text: `[INSTRUCCIONES DEL SISTEMA]\n${systemPrompt}` }] },
+      { role: "model", parts: [{ text: "Entendido. Soy el asistente de Maneki Store." }] },
+      ...historial
+    ];
+    const response = await axios.post(url, {
+      contents,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 500 }
+    });
+    return response.data.candidates?.[0]?.content?.parts?.[0]?.text || "Hubo un problema. Escribe ASESOR para que te atendamos.";
+  } catch (e) {
+    console.error("Error Gemini:", e.response?.data || e.message);
+    return "Hubo un problema técnico. Por favor escribe *ASESOR* para que te atendamos directamente. 🐱";
+  }
+}
+
+async function procesarRespuestaIA(phone, respuestaIA) {
+  let mensajeFinal = respuestaIA;
+
+  const pedidoMatch = respuestaIA.match(/\[PEDIDO_LISTO\]([\s\S]*?)\[\/PEDIDO_LISTO\]/);
+  if (pedidoMatch) {
+    try {
+      const datos = JSON.parse(pedidoMatch[1]);
+      datos.clientePhone = phone;
+      datos.descripcion = datos.producto;
+      datos.foto = "Pendiente";
+      const folio = await crearPedidoSupabase(datos);
+      if (folio) {
+        const resumen = `🐱 *NUEVO PEDIDO IA - MANEKI STORE*\n📋 Folio: ${folio}\n👤 ${datos.nombre}\n📱 ${phone}\n🛍️ ${datos.producto}\n🚚 ${datos.entrega}\n📝 ${datos.notas || ""}`;
+        await notificarNegocio(resumen);
+        mensajeFinal = respuestaIA.replace(/\[PEDIDO_LISTO\][\s\S]*?\[\/PEDIDO_LISTO\]/, "").trim();
+        mensajeFinal += `\n\n📋 *Tu folio es: ${folio}*\n_Guárdalo para rastrear tu pedido_ 🐱`;
+      }
+    } catch (e) {
+      mensajeFinal = respuestaIA.replace(/\[PEDIDO_LISTO\][\s\S]*?\[\/PEDIDO_LISTO\]/, "").trim();
+    }
+  }
+
+  const rastreoMatch = respuestaIA.match(/\[RASTREAR\](.*?)\[\/RASTREAR\]/);
+  if (rastreoMatch) {
+    const folio = rastreoMatch[1].trim();
+    const pedido = await rastrearPedidoSupabase(folio);
+    mensajeFinal = respuestaIA.replace(/\[RASTREAR\].*?\[\/RASTREAR\]/, "").trim();
+    if (pedido) {
+      const statusMap = { "Urgente": "⚠️ Atención prioritaria", "Confirmado": "✅ Confirmado", "Pago": "💰 Pago registrado", "Producción": "⚙️ En producción", "Envío": "📦 Listo para envío", "Salió": "🚚 En camino", "Retirar": "🏪 Listo para recoger" };
+      mensajeFinal += `\n\n📦 *Pedido ${pedido.folio}*\n👤 ${pedido.cliente}\n🛍️ ${pedido.concepto}\n\n*${statusMap[pedido.status] || pedido.status}*`;
+    } else {
+      mensajeFinal += `\n\n❌ No encontré el folio *${folio}*. Verifica que sea correcto.`;
+    }
+  }
+
+  if (respuestaIA.includes("[ASESOR_SOLICITADO]")) {
+    await notificarNegocio(`🔔 *CLIENTE SOLICITA ASESOR (IA)*\n📱 ${phone}\n⏰ ${new Date().toLocaleString("es-MX")}`);
+    mensajeFinal = respuestaIA.replace("[ASESOR_SOLICITADO]", "").trim();
+  }
+
+  return mensajeFinal;
+}
+
+
+
+// ============================================================
 //  SESIONES EN MEMORIA
 // ============================================================
 const sessions = {};
 
 function getSession(phone) {
   if (!sessions[phone]) {
-    sessions[phone] = { step: "menu", pedido: {}, visitas: 0 };
+    sessions[phone] = { step: "menu", pedido: {}, visitas: 0, historial: [] };
   }
   return sessions[phone];
 }
 
 function resetSession(phone) {
   const v = sessions[phone] ? sessions[phone].visitas + 1 : 1;
-  sessions[phone] = { step: "menu", pedido: {}, visitas: v };
+  sessions[phone] = { step: "menu", pedido: {}, visitas: v, historial: [] };
 }
 
 // ============================================================
@@ -202,7 +301,7 @@ function mensajeBienvenida(esClienteFrecuente) {
 5️⃣ Preguntas frecuentes
 6️⃣ Hablar con un asesor
 
-_Responde con el número de tu opción_ 👆`;
+_Responde con el número de tu opción o escríbeme lo que necesitas_ 💬`;
 }
 
 // Traduce status del POS a mensaje amigable para el cliente
@@ -505,9 +604,15 @@ async function procesarMensaje(phone, mensaje) {
 Para más información escribe *ASESOR* o *MENU* para volver.`;
   }
 
-  // Default
-  resetSession(phone);
-  return mensajeBienvenida(session.visitas > 1);
+  // Default - Gemini IA para conversación libre
+  if (!session.historial) session.historial = [];
+  session.historial.push({ role: "user", parts: [{ text: mensaje }] });
+  if (session.historial.length > 20) session.historial = session.historial.slice(-20);
+  session.visitas++;
+  const systemPrompt = await buildSystemPrompt();
+  const respuestaIA = await llamarGemini(session.historial, systemPrompt);
+  session.historial.push({ role: "model", parts: [{ text: respuestaIA }] });
+  return await procesarRespuestaIA(phone, respuestaIA);
 }
 
 // ============================================================
@@ -631,7 +736,9 @@ app.post("/webhook", async (req, res) => {
         const respuesta = await procesarPedido(phone, session, "foto recibida");
         await sendMessage(phone, respuesta);
       } else {
-        await sendMessage(phone, `Vi tu imagen 📸 Escribe *MENU* para ver las opciones.`);
+        const textoImg = "El cliente acaba de enviar una foto o imagen.";
+        const respImg = await procesarMensaje(phone, textoImg);
+        await sendMessage(phone, respImg);
       }
       return;
     } else {
@@ -646,7 +753,6 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// Ruta para registrar el número real en la API de WhatsApp
 app.get("/registrar", async (_, res) => {
   try {
     const r = await axios.post(
@@ -660,23 +766,11 @@ app.get("/registrar", async (_, res) => {
   }
 });
 
-
 app.get("/privacidad", (_, res) => {
   res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Política de Privacidad - Maneki Store</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:40px auto;padding:20px;line-height:1.6}h1{color:#333}h2{color:#555}</style></head><body><h1>Política de Privacidad - Maneki Store Bot</h1><p><strong>Última actualización:</strong> Febrero 2025</p><h2>1. Información que recopilamos</h2><p>Recopilamos el número de teléfono y mensajes enviados a través de WhatsApp para procesar pedidos y brindar atención al cliente.</p><h2>2. Uso de la información</h2><p>La información se usa exclusivamente para: procesar pedidos, rastrear envíos y mejorar el servicio al cliente de Maneki Store.</p><h2>3. Almacenamiento</h2><p>Los datos se almacenan de forma segura en Supabase y no se comparten con terceros.</p><h2>4. Contacto</h2><p>Para cualquier duda sobre privacidad, escríbenos a través de WhatsApp o visita nuestra página de Facebook.</p></body></html>`);
 });
-app.get("/", (_, res) => res.send("🐱 Maneki Store Bot - Activo y conectado a Supabase"));
+
+app.get("/", (_, res) => res.send("🐱 Maneki Store Bot v3.0 con Gemini IA - Activo"));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-  console.log(`🐱 Maneki Store Bot corriendo en puerto ${PORT}`);
-  try {
-    const r = await axios.post(
-      `https://graph.facebook.com/v18.0/2681369575563434/subscribed_apps`,
-      { subscribed_fields: ["messages"] },
-      { headers: { Authorization: `Bearer ${CONFIG.WHATSAPP_TOKEN}`, "Content-Type": "application/json" } }
-    );
-    console.log("✅ Suscripción al webhook:", JSON.stringify(r.data));
-  } catch (e) {
-    console.error("❌ Error suscripción:", e.response?.data || e.message);
-  }
-});
+app.listen(PORT, () => console.log(`🐱 Maneki Store Bot corriendo en puerto ${PORT}`));
