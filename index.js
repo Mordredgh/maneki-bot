@@ -10,7 +10,7 @@ app.use(express.json());
 const CONFIG = {
   // Meta / WhatsApp
   VERIFY_TOKEN: "maneki_store_2024",
-  WHATSAPP_TOKEN: process.env.WHATSAPP_TOKEN || "EAANLqM41gEgBQzdD5ocu0V21COrnxlhIA5qoV64QZAsVLas2CZAoZBm1DsKNiIV4ALENKjm9lcjjpS7JfGP3ELLZCZCtbrsfHzR31m47XbnVDoyN1TgBQW1RQnGRq1VC1h2Axuz44QuUlSchmkoVQXyCDHJiL7Ax5c9ZAPQsHDQ5BfFJlZBz694m3joec0I5ITYjQZDZD",
+  WHATSAPP_TOKEN: "EAANLqM41gEgBQZBN0nP9b5nZCx2ji9gJEJ9Nboe1EKNrWm2V7BgePbsmrTZCeH5GfQ00W6wLEC7fLaZC0GA5pIJKG7IRJ197VgttEt2jqdlhUUxvEEfqXQtfwCcLvOTfo9Uzt1RUcnLuZAzTcCMucHkvjnxFYBqvopalyDnASuDInX74t7poduBcbDcICYNZCbbBG7JqNOXoSWrexiWHA9r4EVJjnZCeLrM0BEwxHh4HTfVRKNcoGRM9GJZC1yKCMwqhEbRZBRZCc5XSq0QqsLVagMPZAfFFwpBeVyZACjVZCZAwZDZD",
   PHONE_NUMBER_ID: "1000545163142966",
 
   // Supabase - los encuentras en Settings > API dentro de tu proyecto
@@ -34,6 +34,7 @@ const CONFIG = {
 // ============================================================
 const supabase = createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
+
 // ============================================================
 //  GEMINI IA
 // ============================================================
@@ -45,7 +46,7 @@ async function buildSystemPrompt() {
 
   return `Eres el asistente virtual de Maneki Store, tienda de regalos personalizados en Monterrey, México.
 
-INFORMACIÓN DEL NEGOCIO:
+INFORMACIÓN:
 - Horario: Lunes-Sábado 8am-10pm, Domingos 8am-2pm
 - Entrega: 2 a 4 días hábiles. Anticipo: 20-40%
 - Facebook: https://www.facebook.com/share/1AnSmoH5Mc/
@@ -62,7 +63,7 @@ INSTRUCCIONES:
 1. Responde en español, amigable con emojis moderados
 2. Para pedidos recopila: nombre, producto, detalles (talla/color/diseño), entrega, dirección si aplica, pago
 3. Cuando tengas TODOS los datos incluye al final exactamente:
-   [PEDIDO_LISTO]{"nombre":"...","telefono":"TELEFONO","producto":"...","entrega":"...","notas":"..."}[/PEDIDO_LISTO]
+   [PEDIDO_LISTO]{"nombre":"...","producto":"...","entrega":"...","notas":"..."}[/PEDIDO_LISTO]
 4. Para rastreo con folio WA-XXXXXX: [RASTREAR]WA-XXXXXX[/RASTREAR]
 5. Si pide asesor humano: [ASESOR_SOLICITADO]
 6. Sé breve y natural como empleado amigable`;
@@ -90,6 +91,7 @@ async function llamarGemini(historial, systemPrompt) {
 async function procesarRespuestaIA(phone, respuestaIA) {
   let mensajeFinal = respuestaIA;
 
+  // Detectar pedido listo
   const pedidoMatch = respuestaIA.match(/\[PEDIDO_LISTO\]([\s\S]*?)\[\/PEDIDO_LISTO\]/);
   if (pedidoMatch) {
     try {
@@ -109,6 +111,7 @@ async function procesarRespuestaIA(phone, respuestaIA) {
     }
   }
 
+  // Detectar rastreo
   const rastreoMatch = respuestaIA.match(/\[RASTREAR\](.*?)\[\/RASTREAR\]/);
   if (rastreoMatch) {
     const folio = rastreoMatch[1].trim();
@@ -122,6 +125,7 @@ async function procesarRespuestaIA(phone, respuestaIA) {
     }
   }
 
+  // Detectar asesor
   if (respuestaIA.includes("[ASESOR_SOLICITADO]")) {
     await notificarNegocio(`🔔 *CLIENTE SOLICITA ASESOR (IA)*\n📱 ${phone}\n⏰ ${new Date().toLocaleString("es-MX")}`);
     mensajeFinal = respuestaIA.replace("[ASESOR_SOLICITADO]", "").trim();
@@ -129,8 +133,6 @@ async function procesarRespuestaIA(phone, respuestaIA) {
 
   return mensajeFinal;
 }
-
-
 
 // ============================================================
 //  SESIONES EN MEMORIA
@@ -301,7 +303,7 @@ function mensajeBienvenida(esClienteFrecuente) {
 5️⃣ Preguntas frecuentes
 6️⃣ Hablar con un asesor
 
-_Responde con el número de tu opción o escríbeme lo que necesitas_ 💬`;
+_Responde con el número de tu opción_ 👆`;
 }
 
 // Traduce status del POS a mensaje amigable para el cliente
@@ -736,9 +738,7 @@ app.post("/webhook", async (req, res) => {
         const respuesta = await procesarPedido(phone, session, "foto recibida");
         await sendMessage(phone, respuesta);
       } else {
-        const textoImg = "El cliente acaba de enviar una foto o imagen.";
-        const respImg = await procesarMensaje(phone, textoImg);
-        await sendMessage(phone, respImg);
+        await sendMessage(phone, `Vi tu imagen 📸 Escribe *MENU* para ver las opciones.`);
       }
       return;
     } else {
@@ -773,4 +773,16 @@ app.get("/privacidad", (_, res) => {
 app.get("/", (_, res) => res.send("🐱 Maneki Store Bot v3.0 con Gemini IA - Activo"));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🐱 Maneki Store Bot corriendo en puerto ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`🐱 Maneki Store Bot v3.0 con Gemini IA corriendo en puerto ${PORT}`);
+  try {
+    const r = await axios.post(
+      `https://graph.facebook.com/v18.0/2681369575563434/subscribed_apps`,
+      { subscribed_fields: ["messages"] },
+      { headers: { Authorization: `Bearer ${CONFIG.WHATSAPP_TOKEN}`, "Content-Type": "application/json" } }
+    );
+    console.log("✅ Suscripción al webhook:", JSON.stringify(r.data));
+  } catch (e) {
+    console.error("❌ Error suscripción:", e.response?.data || e.message);
+  }
+});
