@@ -10,8 +10,8 @@ app.use(express.json());
 const CONFIG = {
   // Meta / WhatsApp
   VERIFY_TOKEN: "maneki_store_2024",
-  WHATSAPP_TOKEN: "EAANLqM41gEgBQZBN0nP9b5nZCx2ji9gJEJ9Nboe1EKNrWm2V7BgePbsmrTZCeH5GfQ00W6wLEC7fLaZC0GA5pIJKG7IRJ197VgttEt2jqdlhUUxvEEfqXQtfwCcLvOTfo9Uzt1RUcnLuZAzTcCMucHkvjnxFYBqvopalyDnASuDInX74t7poduBcbDcICYNZCbbBG7JqNOXoSWrexiWHA9r4EVJjnZCeLrM0BEwxHh4HTfVRKNcoGRM9GJZC1yKCMwqhEbRZBRZCc5XSq0QqsLVagMPZAfFFwpBeVyZACjVZCZAwZDZD",
-  PHONE_NUMBER_ID: "1000545163142966",
+  WHATSAPP_TOKEN: "EAANLqM41gEgBQ8RwxS6a0GLEKnaLdxV8cntjTOufrc3cm9lShXmeQDHkmICC6jDDNW7jRr7YqLlL92PbZBYvtkcqPJOOZC7i87YzsjlYq8bpfapKtZBHqNYFBgLsyPQya3McnqMETIVq9ZAacx4FadAweMBsEt5J2ZCM08AhqiVeKIrN9VCTqMGvDGAvOcY5GpwZDZD",
+  PHONE_NUMBER_ID: "930517563487238",
 
   // Supabase - los encuentras en Settings > API dentro de tu proyecto
   SUPABASE_URL: "https://hoqcrljgmamaumtdrtzi.supabase.co",
