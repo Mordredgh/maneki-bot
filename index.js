@@ -71,7 +71,7 @@ INSTRUCCIONES:
 
 async function llamarGemini(historial, systemPrompt) {
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.GEMINI_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.GEMINI_KEY}`;
     const contents = [
       { role: "user", parts: [{ text: `[INSTRUCCIONES DEL SISTEMA]\n${systemPrompt}` }] },
       { role: "model", parts: [{ text: "Entendido. Soy el asistente de Maneki Store." }] },
